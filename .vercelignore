@@ -1,0 +1,16 @@
+# Files Vercel never uploads, on top of its own list. That list skips .env.local but not .env,
+# so without these lines `vercel deploy` would upload backend/.env with the real TomTom key.
+.env
+.env.*
+!.env.example
+
+# Vercel installs and builds these itself.
+frontend/dist
+
+# Tests, local tools and notes: not part of the deployed app.
+backend/trips/tests
+.pytest_cache
+.ruff_cache
+.vscode
+CLAUDE.md
+REQUIREMENTS.md

@@ -1,0 +1,1455 @@
+:root {
+  --ink: #111827;
+  --muted: #5b6472;
+  --line: #e2e6ec;
+  --surface: #ffffff;
+  --page: #f3f5f8;
+  --accent: #0e7490;
+  --accent-strong: #155e75;
+  --accent-soft: #e6f6fb;
+  --danger: #b42318;
+  --danger-soft: #fef3f2;
+  --warn-soft: #fff8eb;
+  --warn-ink: #8a4b00;
+  --radius: 10px;
+  --shadow: 0 6px 24px rgba(17, 24, 39, 0.14);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  color: var(--ink);
+  background: var(--page);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Each new planning step's message. */
+@keyframes status-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.status-text {
+  display: inline-block;
+  min-width: 0; /* lets the chip's text shrink and end in an ellipsis */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  animation: status-in 300ms var(--ease-out) both;
+}
+
+/* Layout: the map fills the window; the trip panel and the legend float over it. */
+
+.app {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+
+.map-area,
+.map {
+  position: absolute;
+  inset: 0;
+}
+
+.map-failure {
+  position: absolute;
+  inset: 16px 16px auto auto; /* top right: clear of the legend; without a map there are no zoom buttons */
+  max-width: 320px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* While a plan is computed: a chip centered over the part of the map beside the panel. It appears
+   after 300 ms, so plans answered from the cache don't flash it. */
+.map-status {
+  position: absolute;
+  top: 16px;
+  left: calc(50% + 208px); /* the panel takes the first 416 px */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 448px);
+  padding: 8px 14px;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: chip-in 260ms var(--ease-out) 300ms both;
+}
+
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.panel {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  bottom: 16px;
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+.panel-header h1 {
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+
+.panel-header p,
+.empty,
+.status {
+  color: var(--muted);
+}
+
+/* Read by screen readers, not shown. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.spinner {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+/* The form, which slides closed while a plan is shown and open again on "Change trip". */
+
+.collapsible {
+  display: grid;
+  grid-template-rows: 0fr;
+  margin-bottom: -16px; /* gives back the panel's gap while closed */
+  opacity: 0;
+  transition:
+    grid-template-rows 300ms var(--ease-out),
+    margin-bottom 300ms var(--ease-out),
+    opacity 200ms ease;
+}
+
+.collapsible.open {
+  grid-template-rows: 1fr;
+  margin-bottom: 0;
+  opacity: 1;
+}
+
+.collapsible-inner {
+  min-height: 0;
+  overflow: hidden;
+  overflow: clip; /* clips like hidden, but focus() can't scroll it while the form slides */
+  margin: -3px; /* room for the fields' focus outlines, which overflow would cut off */
+  padding: 3px;
+}
+
+.trip-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.field > label,
+.field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.field > input,
+.place-input > input {
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 16px; /* below 16 px, iOS Safari zooms the page in on focus */
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid #cdd3dc;
+  border-radius: 8px;
+  transition: border-color 120ms ease;
+}
+
+.field > input:focus-visible,
+.place-input > input:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.field > input[aria-invalid='true'],
+.place-input > input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+/* The From and To fields' suggestions: a list under the field, over the fields that follow. */
+.place-input {
+  position: relative;
+}
+
+@keyframes suggestions-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid #cdd3dc;
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  animation: suggestions-in 140ms var(--ease-out);
+}
+
+.suggestions li {
+  padding: 8px 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.suggestions li:hover {
+  background: var(--page);
+}
+
+.suggestions li.active {
+  color: var(--accent-strong);
+  background: #dbe5fd; /* clearly stronger than the hover tint */
+}
+
+.suggestions strong {
+  font-weight: 600;
+}
+
+@media (forced-colors: active) {
+  .suggestions li.active {
+    forced-color-adjust: none;
+    color: HighlightText;
+    background: Highlight;
+  }
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.field-error {
+  font-size: 12px;
+  color: var(--danger);
+}
+
+/* "Checkpoints every": radio buttons drawn as one button group; the chosen one is filled. */
+.segmented {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: 2px;
+  padding: 3px;
+  background: #eef1f5;
+  border: 1px solid #dfe3ea;
+  border-radius: 9px;
+}
+
+.segment {
+  position: relative;
+  cursor: pointer;
+}
+
+.segment input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0; /* still focusable and clickable; the span shows its state */
+  cursor: pointer;
+}
+
+.segment span {
+  display: block;
+  padding: 6px 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--muted);
+  border-radius: 6px;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.segment:hover input:not(:checked) + span {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.segment input:checked + span {
+  color: #ffffff;
+  background: var(--accent);
+  box-shadow: 0 1px 3px rgba(29, 78, 216, 0.35);
+}
+
+.segment input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* High-contrast themes replace backgrounds, so mark the chosen interval with system colors. */
+@media (forced-colors: active) {
+  .segment input:checked + span {
+    forced-color-adjust: none;
+    color: HighlightText;
+    background: Highlight;
+  }
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.form-actions .primary {
+  flex: 1;
+}
+
+button.primary,
+button.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    transform 80ms ease;
+}
+
+button.primary {
+  color: #ffffff;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+button.primary:active:not(:disabled),
+button.secondary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+button.primary:disabled {
+  cursor: progress;
+}
+
+button.secondary {
+  color: var(--accent);
+  background: var(--surface);
+  border: 1px solid #c7d2fe;
+}
+
+button.secondary:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+button.secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error {
+  padding: 10px 12px;
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-radius: 8px;
+  animation: fade-in 200ms ease both;
+}
+
+/* The trip on screen, with "Change trip". */
+
+.trip-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto; /* the places and the button, then the details */
+  align-items: center;
+  gap: 2px 12px;
+  padding: 10px 12px;
+  background: var(--page);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  animation: fade-in 240ms ease both;
+}
+
+.trip-places {
+  font-weight: 600;
+}
+
+.trip-details {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.trip-bar .secondary {
+  padding: 5px 10px;
+  font-size: 13px;
+}
+
+.trip-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 0; /* the same box as the Change trip button, so the bar keeps its height */
+  border: 1px solid transparent;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* The heatmap's hour, between the trip and its results. */
+
+.heatmap-slider {
+  padding: 10px 12px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  animation: rise-in 360ms var(--ease-out) both;
+}
+
+.heatmap-slider h2 {
+  font-size: 13px;
+}
+
+/* One line each, whatever the hour, so the panel never jumps while the slider moves. */
+.heatmap-time,
+.heatmap-offset {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.heatmap-time {
+  font-weight: 600;
+}
+
+.heatmap-offset {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.heatmap-slider input[type='range'] {
+  display: block;
+  width: 100%;
+  margin: 8px 0 2px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.heatmap-slider input[type='range']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Each tick is centred where the thumb's centre sits for its hour: the track minus half a thumb
+   (8 px in Chrome) at each end, at --at = hour / last hour. */
+.heatmap-ticks {
+  position: relative;
+  height: 15px;
+  margin: 0 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.heatmap-ticks span {
+  position: absolute;
+  left: calc(var(--at) * 100%);
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+/* Results */
+
+.results:focus {
+  outline: none; /* a focus target after planning, not a control */
+}
+
+/* While a plan is computed: a moving bar and shimmering placeholders shaped like the results.
+   They appear after 300 ms, like the map's chip. */
+.plan-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fade-in 200ms ease 300ms both;
+}
+
+.progress {
+  position: relative;
+  height: 4px;
+  overflow: hidden;
+  background: var(--accent-soft);
+  border-radius: 2px;
+}
+
+.progress span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: var(--accent);
+  border-radius: 2px;
+  animation: progress 1.2s ease-in-out infinite;
+}
+
+@keyframes progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #eceff3 25%, #f7f8fa 37%, #eceff3 63%);
+  background-size: 400% 100%;
+  border-radius: 6px;
+  animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 50%;
+  }
+  to {
+    background-position: 0 50%;
+  }
+}
+
+.skeleton-recommendation {
+  height: 64px;
+  border-radius: 8px;
+}
+
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  animation: fade-in 300ms ease both;
+  animation-delay: calc(var(--order, 0) * 80ms);
+}
+
+.skeleton-title {
+  width: 45%;
+  height: 16px;
+}
+
+.skeleton-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.skeleton-stats .skeleton {
+  height: 30px;
+}
+
+.skeleton-bar {
+  height: 8px;
+}
+
+.plan-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* A new plan's blocks slide in one after another (--order is set on each). */
+.plan-summary .recommendation,
+.plan-summary .notice,
+.plan-summary .route-card {
+  animation: rise-in 360ms var(--ease-out) both;
+  animation-delay: calc(var(--order, 0) * 70ms);
+}
+
+.recommendation {
+  padding: 12px 14px;
+  background: var(--accent-soft);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+}
+
+.recommendation.unsafe {
+  background: var(--danger-soft);
+  border-left-color: var(--danger);
+}
+
+.recommendation h2 {
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+
+.recommendation .warning {
+  margin-top: 6px;
+  font-weight: 600;
+  color: var(--danger);
+}
+
+.notice {
+  padding: 8px 12px;
+  color: var(--warn-ink);
+  background: var(--warn-soft);
+  border-radius: 8px;
+}
+
+.route-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Each card selects its route; the selected one has a blue ring (a 1 px border plus a 1 px shadow,
+   so selecting never shifts the layout) and a filled circle. */
+.route-card {
+  position: relative;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition:
+    box-shadow 150ms ease,
+    border-color 150ms ease;
+}
+
+.route-card:hover {
+  border-color: #c3cad5;
+  box-shadow: 0 4px 14px rgba(17, 24, 39, 0.1);
+}
+
+.route-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.route-card.selected:hover {
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 4px 14px rgba(17, 24, 39, 0.1);
+}
+
+.route-card:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.route-check {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-left: auto;
+  border: 2px solid #c3cad5;
+  border-radius: 50%;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.route-card.selected .route-check {
+  border-color: var(--accent);
+  background: radial-gradient(circle, var(--accent) 0 4px, transparent 4.5px);
+}
+
+/* Forced colors (such as Windows High Contrast) give every border the same color and drop shadows
+   and gradients, so the selected card is marked with the system's highlight color instead. */
+@media (forced-colors: active) {
+  .route-card.selected {
+    border-color: Highlight;
+  }
+
+  .route-card.selected .route-check {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background: radial-gradient(circle, Highlight 0 4px, Canvas 4.5px);
+  }
+}
+
+.route-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-bottom: 8px;
+}
+
+.route-card-header h3 {
+  font-size: 15px;
+}
+
+.route-swatch {
+  width: 18px;
+  height: 5px;
+  border-radius: 3px;
+}
+
+.tag {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.badge {
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border-radius: 999px;
+}
+
+.badge.recommended {
+  color: #ffffff;
+  background: var(--accent);
+}
+
+.badge.unsafe {
+  color: #ffffff;
+  background: var(--danger);
+}
+
+.route-stats {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin: 0 0 10px;
+}
+
+.route-stats .wide {
+  grid-column: 1 / -1;
+}
+
+.route-stats dt,
+.risk-miles dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.route-stats dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.risk-bar {
+  display: flex;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--line);
+}
+
+.risk-bar span {
+  min-width: 2px;
+}
+
+.risk-miles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 0;
+}
+
+.risk-miles div {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--muted);
+}
+
+.risk-miles div.nonzero,
+.risk-miles div.nonzero dt {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.risk-miles dd {
+  margin: 0;
+}
+
+.dot,
+.legend-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 4px;
+  border-radius: 50%;
+}
+
+/* Legend */
+
+.legend {
+  position: absolute;
+  right: 16px;
+  bottom: 36px; /* above the map's attribution line */
+  width: 228px;
+  padding: 12px 14px 13px;
+  font-size: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+/* Two sections: the risk scale, then what the map's own marks mean. */
+.legend h2 {
+  margin: 0 0 7px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.legend-keys-title {
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.legend ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One slot width for every swatch, whatever its shape, so the labels share one left edge. */
+.legend-swatch {
+  flex: 0 0 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 14px;
+  margin-right: 9px;
+}
+
+.legend-swatch > * {
+  margin: 0; /* the slot handles the spacing */
+}
+
+.legend-levels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 6px;
+}
+
+.legend-levels li,
+.legend-keys li {
+  display: flex;
+  align-items: center;
+  min-height: 19px;
+}
+
+.legend-levels li {
+  font-weight: 600;
+}
+
+/* A thin ring, so pale levels (Moderate's yellow) still read against the white card. */
+.legend-levels .legend-dot,
+.legend-nodata .legend-dot {
+  width: 11px;
+  height: 11px;
+  box-shadow: inset 0 0 0 1px rgb(17 24 39 / 14%);
+}
+
+/* "No data" is the absence of a level, not a worse one, so it is set apart from the scale. */
+.legend-nodata {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+  padding-top: 6px;
+  color: var(--muted);
+  border-top: 1px dashed var(--line);
+}
+
+.legend .legend-keys {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.legend-hint {
+  margin-left: 4px;
+  color: var(--muted);
+}
+
+/* Drawn like the map's lines: the selected route thick and in the accent, the others thinner. */
+.legend-line {
+  display: inline-block;
+  width: 20px;
+  height: 3px;
+  border-radius: 2px;
+  opacity: 0.75;
+}
+
+.legend-line.selected {
+  height: 6px;
+  opacity: 1;
+}
+
+.legend-dot.outlined {
+  background: #43a047;
+  box-shadow:
+    0 0 0 1.5px #ffffff,
+    0 0 0 2.5px #c3cad5;
+}
+
+/* A few translucent cells, like the heatmap's. */
+.legend-cell {
+  display: inline-block;
+  width: 16px;
+  height: 12px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #43a04740 0 33%, #fdd83570 33% 66%, #fb8c0080 66%);
+}
+
+.legend-ring {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2.5px solid #111827;
+  border-radius: 50%;
+}
+
+/* Forced colors would paint these keys in the background color. They keep their own colors, since
+   they stand for the map's colors, which forced colors leave alone. */
+@media (forced-colors: active) {
+  .route-swatch,
+  .risk-bar,
+  .dot,
+  .legend-dot,
+  .legend-line,
+  .legend-cell,
+  .legend-truck,
+  .popup-risk,
+  .popup-level::before,
+  .tip-risk {
+    forced-color-adjust: none;
+  }
+}
+
+/* Checkpoint popup. MapLibre positions the popup with a transform on its outer element, so that
+   element only fades; the content box also grows from the side next to its point. */
+
+@keyframes popup-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes popup-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+.checkpoint-popup {
+  animation: fade-in 180ms ease both;
+}
+
+/* MapController.closePopup adds this to a fully open popup, then removes it after the fade. */
+.checkpoint-popup.closing {
+  animation: fade-out 160ms ease forwards;
+}
+
+.checkpoint-popup .maplibregl-popup-content {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  transform-origin: 50% 100%;
+  animation: popup-in 220ms var(--ease-out) both;
+}
+
+.checkpoint-popup.closing .maplibregl-popup-content {
+  pointer-events: none; /* a fading popup lets clicks through to the map */
+  animation: popup-out 160ms ease forwards;
+}
+
+.checkpoint-popup.maplibregl-popup-anchor-top .maplibregl-popup-content {
+  transform-origin: 50% 0;
+}
+
+.checkpoint-popup.maplibregl-popup-anchor-left .maplibregl-popup-content {
+  transform-origin: 0 50%;
+}
+
+.checkpoint-popup.maplibregl-popup-anchor-right .maplibregl-popup-content {
+  transform-origin: 100% 50%;
+}
+
+/* On a corner anchor the tip meets a corner, which stays square. */
+.checkpoint-popup.maplibregl-popup-anchor-top-left .maplibregl-popup-content {
+  transform-origin: 0 0;
+  border-top-left-radius: 0;
+}
+
+.checkpoint-popup.maplibregl-popup-anchor-top-right .maplibregl-popup-content {
+  transform-origin: 100% 0;
+  border-top-right-radius: 0;
+}
+
+.checkpoint-popup.maplibregl-popup-anchor-bottom-left .maplibregl-popup-content {
+  transform-origin: 0 100%;
+  border-bottom-left-radius: 0;
+}
+
+.checkpoint-popup.maplibregl-popup-anchor-bottom-right .maplibregl-popup-content {
+  transform-origin: 100% 100%;
+  border-bottom-right-radius: 0;
+}
+
+.popup {
+  position: relative;
+  font-size: 13px;
+}
+
+.popup-close {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font: inherit;
+  font-size: 19px;
+  line-height: 1;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.popup-close:hover {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
+.popup-body {
+  max-height: min(460px, 45vh); /* a spot shared by three routes has three sections */
+  overflow-y: auto;
+}
+
+.popup-section + .popup-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 2px solid var(--line);
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.popup-section:first-child .popup-header {
+  padding-right: 22px; /* room for the close button */
+}
+
+/* The title carries the app's accent: a small bar, then the route and checkpoint in accent ink. */
+.popup-title {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
+.popup-title::before {
+  content: '';
+  flex-shrink: 0;
+  width: 3px;
+  height: 13px;
+  margin-right: 7px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+/* The overall level. Its colors are the risk scale's, set inline, so they stay semantic. */
+.popup-risk {
+  flex-shrink: 0;
+  padding: 2px 9px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 999px;
+}
+
+/* Where the checkpoint is, as a chip in the accent tint: metadata, not a weather value. */
+.popup-subtitle {
+  display: inline-block;
+  margin: 7px 0 10px;
+  padding: 2px 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border-radius: 6px;
+}
+
+.popup-values {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0;
+  margin: 0;
+}
+
+.popup-values dt,
+.popup-values dd {
+  padding: 5px 0;
+  border-bottom: 1px solid #eef1f4;
+}
+
+.popup-values dt {
+  padding-right: 14px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.popup-values dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* The weather rows begin at Wind, the third pair: a clear break from the two timing rows. */
+.popup-values dt:nth-of-type(3),
+.popup-values dd:nth-of-type(3) {
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+}
+
+.popup-values dt:last-of-type,
+.popup-values dd:last-of-type {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+/* Each condition's own level, as a chip tinted with that level's color. The text stays ink on a
+   light tint, so contrast holds for every level, including yellow. */
+.popup-level {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px 1px 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--level-color) 16%, #ffffff);
+  border: 1px solid color-mix(in srgb, var(--level-color) 45%, #ffffff);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.popup-level::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--level-color);
+}
+
+/* The load rule, or why a level is missing: an accent callout, so it reads as an explanation. */
+.popup-note {
+  position: relative;
+  margin-top: 10px;
+  padding: 7px 10px 7px 29px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+}
+
+.popup-note::before {
+  content: 'i';
+  position: absolute;
+  top: 8px;
+  left: 9px;
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #ffffff;
+  background: var(--accent);
+  border-radius: 50%;
+}
+
+/* The legend's truck marker: a route-coloured puck with a white ring, like the map's. */
+.legend-truck {
+  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
+}
+
+/* Checkpoint hover tip: the short version. pointer-events are off so it can never sit under the
+   pointer that opened it, which would make it flicker. */
+.checkpoint-tip {
+  pointer-events: none;
+  animation: fade-in 120ms ease both;
+}
+
+.checkpoint-tip .maplibregl-popup-content {
+  padding: 7px 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgb(17 24 39 / 18%);
+}
+
+.tip {
+  font-size: 12px;
+}
+
+.tip-title {
+  display: block;
+  font-weight: 700;
+  color: var(--accent-strong);
+  white-space: nowrap;
+}
+
+.tip-line {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 4px;
+}
+
+.tip-risk {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 999px;
+}
+
+.tip-eta {
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tip-lead {
+  margin-top: 3px;
+  font-weight: 600;
+}
+
+.tip-hint {
+  margin-top: 5px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+/* Narrow screens: map on top, then the panel and the legend in the page flow. */
+
+@media (max-width: 899px) {
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  .map-area {
+    position: relative;
+    height: 55vh;
+    flex-shrink: 0;
+  }
+
+  .map-status {
+    top: 12px;
+    left: 50%;
+    max-width: calc(100% - 32px);
+  }
+
+  .panel,
+  .legend {
+    position: static;
+    width: auto;
+    margin: 12px;
+    box-shadow: none;
+  }
+
+  .legend {
+    margin-top: 0;
+  }
+
+  /* The map is 55vh tall here: half of it, less the popup's padding and tip, so a popup fits on
+     whichever side of its point MapLibre opens it. Longer popups scroll. */
+  .popup-body {
+    max-height: calc(27.5vh - 34px);
+  }
+}
+
+/* For people who ask their system for less motion: no sliding, fading, spinning or shimmering. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+
+  .progress span {
+    width: 100%; /* a still, faint bar rather than one that seems stuck at 40% */
+    opacity: 0.35;
+  }
+}

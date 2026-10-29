@@ -1,0 +1,27 @@
+# Secrets
+backend/.env
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Node / Vite
+node_modules/
+frontend/dist/
+
+# Vercel
+.vercel/
+
+# OS / editors
+.DS_Store
+
+# Local working files, kept out of the repository
+/CLAUDE.md
+/REQUIREMENTS.md
+.vscode
